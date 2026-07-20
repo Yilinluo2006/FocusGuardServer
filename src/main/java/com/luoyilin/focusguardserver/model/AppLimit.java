@@ -1,35 +1,54 @@
-package com.luoyilin.focusguardserver.model;;
+package com.luoyilin.focusguardserver.model;
 
 public class AppLimit {
 
     private String packageName;
-    // 保存应用包名，例如 Instagram 的包名
+    // 保存应用包名
 
     private int limitMinutes;
-    // 保存每天允许使用的分钟数
+    // 保存每天限制的分钟数
 
     private boolean enabled;
-    // 表示当前限制是否启用
+    // 保存该限制是否启用
+
+    public AppLimit() {
+    }
+    // 无参构造方法：帮助 Spring 将收到的 JSON 转换成 AppLimit 对象
 
     public AppLimit(String packageName, int limitMinutes, boolean enabled) {
         this.packageName = packageName;
         this.limitMinutes = limitMinutes;
         this.enabled = enabled;
     }
-    // 构造方法：创建 AppLimit 对象并初始化三个属性
+    // 有参构造方法：方便我们直接使用三个属性创建对象
 
     public String getPackageName() {
         return packageName;
     }
-    // 返回应用包名
+    // 获取应用包名
+
+    public void setPackageName(String packageName) {
+        this.packageName = packageName;
+    }
+    // 修改应用包名
 
     public int getLimitMinutes() {
         return limitMinutes;
     }
-    // 返回限制时长
+    // 获取限制分钟数
+
+    public void setLimitMinutes(int limitMinutes) {
+        this.limitMinutes = limitMinutes;
+    }
+    // 修改限制分钟数
 
     public boolean isEnabled() {
         return enabled;
     }
-    // 返回限制是否启用
+    // 获取限制是否启用
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+    // 修改限制是否启用
 }
