@@ -1,3 +1,4 @@
+//负责健康检查接口
 package com.luoyilin.focusguardserver.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
