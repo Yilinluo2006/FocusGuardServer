@@ -6,6 +6,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 
 @Entity
 @Table(name = "app_limits")
@@ -16,17 +19,20 @@ public class AppLimit {
     private Long id;
     // 数据库主键，由 MySQL 自动递增生成
 
+    @NotBlank(message = "应用包名不能为空")
     @Column(name = "package_name", nullable = false, unique = true)
     private String packageName;
-    // 保存应用包名，例如 com.instagram.android
+    // 包名不能是 null、空字符串或只有空格
 
+    @Min(value = 1, message = "限制时间至少为 1 分钟")
+    @Max(value = 1440, message = "限制时间不能超过 1440 分钟")
     @Column(name = "limit_minutes", nullable = false)
     private int limitMinutes;
-    // 保存每天允许使用的分钟数
+    // 限制时间必须处于 1 到 1440 分钟之间
 
     @Column(nullable = false)
     private boolean enabled;
-    // 保存该限制当前是否启用
+    // 保存限制是否启用
 
     public AppLimit() {
     }
@@ -37,12 +43,12 @@ public class AppLimit {
         this.limitMinutes = limitMinutes;
         this.enabled = enabled;
     }
-    // 创建 AppLimit 对象时初始化三个业务属性
+    // 创建对象时初始化三个业务属性
 
     public Long getId() {
         return id;
     }
-    // 返回数据库记录的主键
+    // 返回数据库主键
 
     public String getPackageName() {
         return packageName;
@@ -69,5 +75,5 @@ public class AppLimit {
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
     }
-    // 读取或修改限制启用状态
+    // 读取或修改启用状态
 }
