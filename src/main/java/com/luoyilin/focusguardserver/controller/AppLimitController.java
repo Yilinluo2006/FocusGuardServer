@@ -1,5 +1,7 @@
 package com.luoyilin.focusguardserver.controller;
 
+import com.luoyilin.focusguardserver.dto.AppLimitRequest;
+import com.luoyilin.focusguardserver.dto.AppLimitResponse;
 import com.luoyilin.focusguardserver.model.AppLimit;
 import com.luoyilin.focusguardserver.service.AppLimitService;
 import jakarta.validation.Valid;
@@ -19,43 +21,88 @@ import java.util.List;
 public class AppLimitController {
 
     private final AppLimitService appLimitService;
-    // 保存由 Spring 提供的 Service
+    // 保存由 Spring 提供的 AppLimitService 对象
 
     public AppLimitController(AppLimitService appLimitService) {
         this.appLimitService = appLimitService;
     }
-    // 通过构造器注入 Service
+    // 构造器注入：Spring 创建 Controller 时自动传入 Service
 
     @GetMapping
-    public List<AppLimit> getAllLimits() {
-        return appLimitService.getAllLimits();
+    public List<AppLimitResponse> getAllLimits() {
+        return appLimitService.getAllLimits()
+                .stream()
+                .map(this::convertToResponse)
+                .toList();
     }
-    // GET /api/limits：查询全部限制
+    // 查询全部实体，并把每个 AppLimit 转换成 AppLimitResponse
 
     @GetMapping("/{id}")
-    public AppLimit getLimitById(@PathVariable("id") Long id) {
-        return appLimitService.getLimitById(id);
+    public AppLimitResponse getLimitById(
+            @PathVariable("id") Long id
+    ) {
+        AppLimit appLimit = appLimitService.getLimitById(id);
+        // 通过 Service 查询数据库实体
+
+        return convertToResponse(appLimit);
+        // 把实体转换成响应 DTO 后再返回
     }
-    // GET /api/limits/{id}：查询单条限制
+    // GET /api/limits/{id}：查询指定应用限制
 
     @PostMapping
-    public AppLimit addLimit(@Valid @RequestBody AppLimit appLimit) {
-        return appLimitService.addLimit(appLimit);
+    public AppLimitResponse addLimit(
+            @Valid @RequestBody AppLimitRequest request
+    ) {
+        AppLimit appLimit = convertToAppLimit(request);
+        // 把请求 DTO 转换成数据库实体
+
+        AppLimit savedAppLimit = appLimitService.addLimit(appLimit);
+        // 保存数据并取得包含数据库 ID 的实体
+
+        return convertToResponse(savedAppLimit);
+        // 把保存结果转换成响应 DTO
     }
-    // POST /api/limits：校验数据并新增限制
+    // POST /api/limits：校验并新增应用限制
 
     @PutMapping("/{id}")
-    public AppLimit updateLimit(
+    public AppLimitResponse updateLimit(
             @PathVariable("id") Long id,
-            @Valid @RequestBody AppLimit updatedAppLimit
+            @Valid @RequestBody AppLimitRequest request
     ) {
-        return appLimitService.updateLimit(id, updatedAppLimit);
+        AppLimit updatedAppLimit = convertToAppLimit(request);
+        // 把客户端的新数据转换成实体
+
+        AppLimit savedAppLimit =
+                appLimitService.updateLimit(id, updatedAppLimit);
+        // 更新数据库中指定 ID 的记录
+
+        return convertToResponse(savedAppLimit);
+        // 把更新后的实体转换成响应 DTO
     }
-    // PUT /api/limits/{id}：校验数据并修改限制
+    // PUT /api/limits/{id}：校验并修改应用限制
 
     @DeleteMapping("/{id}")
     public void deleteLimit(@PathVariable("id") Long id) {
         appLimitService.deleteLimit(id);
     }
-    // DELETE /api/limits/{id}：删除限制
+    // DELETE /api/limits/{id}：删除指定应用限制
+
+    private AppLimit convertToAppLimit(AppLimitRequest request) {
+        return new AppLimit(
+                request.getPackageName(),
+                request.getLimitMinutes(),
+                request.isEnabled()
+        );
+    }
+    // AppLimitRequest 转换为数据库实体 AppLimit
+
+    private AppLimitResponse convertToResponse(AppLimit appLimit) {
+        return new AppLimitResponse(
+                appLimit.getId(),
+                appLimit.getPackageName(),
+                appLimit.getLimitMinutes(),
+                appLimit.isEnabled()
+        );
+    }
+    // 数据库实体 AppLimit 转换为 AppLimitResponse
 }
