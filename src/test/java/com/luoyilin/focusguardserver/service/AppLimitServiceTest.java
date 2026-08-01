@@ -249,4 +249,116 @@ class AppLimitServiceTest {
         ).save(any(AppLimit.class));
         // any(AppLimit.class) 表示任意 AppLimit 对象都不允许保存
     }
+    @Test
+    void getLimitByIdReturnsLimitWhenRecordExists() {
+        Long id = 1L;
+
+        AppLimit appLimit = new AppLimit(
+                "com.example.test",
+                30,
+                true
+        );
+        // 创建一条模拟的应用限制记录
+
+        when(
+                appLimitRepository.findById(id)
+        ).thenReturn(Optional.of(appLimit));
+        // 模拟 Repository 根据 ID 查询到这条记录
+
+        AppLimit result = appLimitService.getLimitById(id);
+        // 调用真正的 Service 查询方法
+
+        assertSame(appLimit, result);
+        // 验证 Service 返回的是查询到的对象
+
+        verify(appLimitRepository).findById(id);
+        // 验证 Repository 的 findById 确实被调用了一次
+    }
+    @Test
+    void getLimitByIdThrowsNotFoundWhenRecordDoesNotExist() {
+        Long id = 99L;
+        // 使用一个假设不存在的记录 ID
+
+        when(
+                appLimitRepository.findById(id)
+        ).thenReturn(Optional.empty());
+        // Optional.empty() 表示 Repository 没有查询到数据
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> appLimitService.getLimitById(id)
+        );
+        // 验证调用 Service 后会抛出 ResponseStatusException
+
+        assertEquals(
+                404,
+                exception.getStatusCode().value()
+        );
+        // 验证异常对应的 HTTP 状态码是 404
+
+        assertEquals(
+                "App limit not found",
+                exception.getReason()
+        );
+        // 验证异常提示内容正确
+
+        verify(appLimitRepository).findById(id);
+        // 验证 Repository 的查询方法确实被调用
+    }
+    @Test
+    void deleteLimitDeletesWhenRecordExists() {
+        Long id = 1L;
+        // 准备要删除的记录 ID
+
+        when(
+                appLimitRepository.existsById(id)
+        ).thenReturn(true);
+        // 模拟数据库中存在这条记录
+
+        appLimitService.deleteLimit(id);
+        // 调用 Service 的删除方法
+
+        verify(appLimitRepository).existsById(id);
+        // 验证 Service 先检查了记录是否存在
+
+        verify(appLimitRepository).deleteById(id);
+        // 验证存在记录时，确实调用了删除方法
+    }
+    @Test
+    void deleteLimitThrowsNotFoundWhenRecordDoesNotExist() {
+        Long id = 99L;
+        // 准备一个不存在的记录 ID
+
+        when(
+                appLimitRepository.existsById(id)
+        ).thenReturn(false);
+        // 模拟数据库中不存在这条记录
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> appLimitService.deleteLimit(id)
+        );
+        // 验证删除操作会抛出 ResponseStatusException
+
+        assertEquals(
+                404,
+                exception.getStatusCode().value()
+        );
+        // 验证 HTTP 状态码为 404
+
+        assertEquals(
+                "App limit not found",
+                exception.getReason()
+        );
+        // 验证异常提示内容
+
+        verify(appLimitRepository).existsById(id);
+        // 验证 Service 检查了记录是否存在
+
+        verify(
+                appLimitRepository,
+                never()
+        ).deleteById(id);
+        // 记录不存在时，绝对不能调用删除方法
+    }
 }
