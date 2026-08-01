@@ -7,8 +7,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,11 +26,11 @@ class AppLimitServiceTest {
 
     @Mock
     private AppLimitRepository appLimitRepository;
-    // 创建一个假的 Repository，不连接真实 MySQL
+    // 创建假的 Repository，不连接 MySQL
 
     @InjectMocks
     private AppLimitService appLimitService;
-    // 创建 Service，并自动把假的 Repository 注入进去
+    // 创建真实 Service，并注入假的 Repository
 
     @Test
     void addLimitSavesWhenPackageNameDoesNotExist() {
@@ -30,34 +39,214 @@ class AppLimitServiceTest {
                 30,
                 true
         );
-        // 准备一条用于测试的应用限制数据
 
         when(
                 appLimitRepository.existsByPackageName(
                         "com.example.test"
                 )
         ).thenReturn(false);
-        // 规定假的 Repository 查询包名时返回 false，表示包名不存在
+        // 模拟数据库中不存在这个包名
 
         when(
                 appLimitRepository.save(appLimit)
         ).thenReturn(appLimit);
-        // 规定调用 save() 时，返回传入的 AppLimit 对象
+        // 模拟保存后返回原对象
 
         AppLimit result = appLimitService.addLimit(appLimit);
-        // 调用真正需要测试的 Service 方法
 
         assertSame(appLimit, result);
-        // 判断 Service 返回的是否是预期对象
+        // 验证返回的是同一个对象
+
+        verify(appLimitRepository)
+                .existsByPackageName("com.example.test");
+
+        verify(appLimitRepository)
+                .save(appLimit);
+    }
+
+    @Test
+    void addLimitThrowsConflictWhenPackageNameAlreadyExists() {
+        AppLimit appLimit = new AppLimit(
+                "com.instagram.android",
+                30,
+                true
+        );
+
+        when(
+                appLimitRepository.existsByPackageName(
+                        "com.instagram.android"
+                )
+        ).thenReturn(true);
+        // 模拟数据库中已经存在这个包名
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> appLimitService.addLimit(appLimit)
+        );
+
+        assertEquals(
+                409,
+                exception.getStatusCode().value()
+        );
+
+        assertEquals(
+                "该应用已经存在限制记录",
+                exception.getReason()
+        );
+
+        verify(appLimitRepository)
+                .existsByPackageName("com.instagram.android");
 
         verify(
-                appLimitRepository
-        ).existsByPackageName("com.example.test");
-        // 验证 Service 确实检查了包名是否重复
-
-        verify(
-                appLimitRepository
+                appLimitRepository,
+                never()
         ).save(appLimit);
-        // 验证检查通过后确实调用了保存方法
+        // 包名重复时不能保存
+    }
+
+    @Test
+    void updateLimitUpdatesAndSavesWhenPackageNameIsAvailable() {
+        Long id = 1L;
+        // 1L 表示 Long 类型的数字 1
+
+        AppLimit existingAppLimit = new AppLimit(
+                "com.example.old",
+                30,
+                true
+        );
+        // 模拟数据库中的原记录
+
+        AppLimit updatedAppLimit = new AppLimit(
+                "com.example.updated",
+                60,
+                false
+        );
+        // 模拟客户端提交的新数据
+
+        when(
+                appLimitRepository.findById(id)
+        ).thenReturn(Optional.of(existingAppLimit));
+        // 模拟根据 ID 找到原记录
+
+        when(
+                appLimitRepository.existsByPackageNameAndIdNot(
+                        "com.example.updated",
+                        id
+                )
+        ).thenReturn(false);
+        // 模拟新包名没有被其他记录占用
+
+        when(
+                appLimitRepository.save(existingAppLimit)
+        ).thenReturn(existingAppLimit);
+
+        AppLimit result = appLimitService.updateLimit(
+                id,
+                updatedAppLimit
+        );
+
+        assertSame(existingAppLimit, result);
+        // 验证 Service 修改并返回原实体
+
+        assertEquals(
+                "com.example.updated",
+                result.getPackageName()
+        );
+
+        assertEquals(
+                60,
+                result.getLimitMinutes()
+        );
+
+        assertFalse(result.isEnabled());
+        // 验证三个业务字段都已更新
+
+        verify(appLimitRepository).findById(id);
+
+        verify(appLimitRepository)
+                .existsByPackageNameAndIdNot(
+                        "com.example.updated",
+                        id
+                );
+
+        verify(appLimitRepository)
+                .save(existingAppLimit);
+    }
+
+    @Test
+    void updateLimitThrowsConflictWhenPackageNameBelongsToAnotherRecord() {
+        Long id = 1L;
+
+        AppLimit existingAppLimit = new AppLimit(
+                "com.example.old",
+                30,
+                true
+        );
+        // 模拟数据库中的原记录
+
+        AppLimit updatedAppLimit = new AppLimit(
+                "com.instagram.android",
+                60,
+                false
+        );
+        // 模拟客户端想改成已被其他记录使用的包名
+
+        when(
+                appLimitRepository.findById(id)
+        ).thenReturn(Optional.of(existingAppLimit));
+
+        when(
+                appLimitRepository.existsByPackageNameAndIdNot(
+                        "com.instagram.android",
+                        id
+                )
+        ).thenReturn(true);
+        // true 表示其他记录已经使用了目标包名
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> appLimitService.updateLimit(
+                        id,
+                        updatedAppLimit
+                )
+        );
+        // 验证更新操作抛出冲突异常
+
+        assertEquals(
+                409,
+                exception.getStatusCode().value()
+        );
+
+        assertEquals(
+                "该应用已经存在其他限制记录",
+                exception.getReason()
+        );
+
+        assertEquals(
+                "com.example.old",
+                existingAppLimit.getPackageName()
+        );
+
+        assertEquals(
+                30,
+                existingAppLimit.getLimitMinutes()
+        );
+
+        assertTrue(existingAppLimit.isEnabled());
+        // 验证发生冲突后，原对象的三个字段都没有改变
+
+        verify(appLimitRepository).findById(id);
+
+        verify(appLimitRepository)
+                .existsByPackageNameAndIdNot(
+                        "com.instagram.android",
+                        id
+                );
+
+        verify(
+                appLimitRepository,
+                never()
+        ).save(any(AppLimit.class));
+        // any(AppLimit.class) 表示任意 AppLimit 对象都不允许保存
     }
 }
