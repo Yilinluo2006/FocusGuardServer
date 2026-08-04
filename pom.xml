@@ -64,6 +64,12 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-crypto</artifactId>
+        </dependency>
+        <!-- 提供安全的 BCrypt 密码哈希功能 -->
+
     </dependencies>
 
     <build>
