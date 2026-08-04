@@ -1,5 +1,7 @@
 package com.luoyilin.focusguardserver.controller;
 
+import com.luoyilin.focusguardserver.dto.auth.LoginRequest;
+import com.luoyilin.focusguardserver.dto.auth.LoginResponse;
 import com.luoyilin.focusguardserver.dto.auth.RegisterRequest;
 import com.luoyilin.focusguardserver.dto.auth.RegisterResponse;
 import com.luoyilin.focusguardserver.model.User;
@@ -17,27 +19,31 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
-    // 保存 Spring 提供的注册业务对象
 
     public AuthController(AuthService authService) {
         this.authService = authService;
     }
-    // 构造器注入：Spring 自动传入 AuthService
+    // Spring 自动把 AuthService 注入 Controller
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(
             @Valid @RequestBody RegisterRequest request
     ) {
         User user = authService.register(request);
-        // 调用 Service 检查数据、处理密码并保存用户
-
-        RegisterResponse response =
-                new RegisterResponse(user);
-        // 把 User 实体转换成不包含密码哈希的响应对象
+        RegisterResponse response = new RegisterResponse(user);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
-        // 返回 HTTP 201 和注册成功后的用户信息
     }
+    // 接收 POST /api/auth/register，成功时返回 HTTP 201
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+        LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+    // 接收 POST /api/auth/login，验证成功时返回 HTTP 200 和 JWT
 }

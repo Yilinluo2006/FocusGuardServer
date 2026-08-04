@@ -1,5 +1,7 @@
 package com.luoyilin.focusguardserver.service;
 
+import com.luoyilin.focusguardserver.dto.auth.LoginRequest;
+import com.luoyilin.focusguardserver.dto.auth.LoginResponse;
 import com.luoyilin.focusguardserver.dto.auth.RegisterRequest;
 import com.luoyilin.focusguardserver.model.User;
 import com.luoyilin.focusguardserver.repository.UserRepository;
@@ -14,28 +16,23 @@ import java.util.Locale;
 public class AuthService {
 
     private final UserRepository userRepository;
-    // 负责查询和保存 users 表中的数据
-
     private final PasswordEncoder passwordEncoder;
-    // 负责处理密码哈希
+    private final JwtService jwtService;
 
     public AuthService(
             UserRepository userRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
-    // Spring 通过构造器自动注入两个依赖对象
+    // Spring 自动注入数据库操作、密码处理和 JWT 服务
 
     public User register(RegisterRequest request) {
         String username = request.getUsername().trim();
-        // 去掉用户名开头和结尾的空格
-
-        String email = request.getEmail()
-                .trim()
-                .toLowerCase(Locale.ROOT);
-        // 去掉邮箱两端空格，并统一转换成小写
+        String email = normalizeEmail(request.getEmail());
 
         if (userRepository.existsByUsername(username)) {
             throw new ResponseStatusException(
@@ -43,7 +40,6 @@ public class AuthService {
                     "用户名已经存在"
             );
         }
-        // 用户名重复时返回 HTTP 409
 
         if (userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(
@@ -51,20 +47,43 @@ public class AuthService {
                     "邮箱已经被注册"
             );
         }
-        // 邮箱重复时返回 HTTP 409
 
         String passwordHash =
                 passwordEncoder.encode(request.getPassword());
-        // 使用 BCrypt 把明文密码转换成不可逆的哈希值
 
-        User user = new User(
-                username,
-                email,
-                passwordHash
-        );
-        // 创建包含用户名、邮箱和密码哈希的用户实体
-
+        User user = new User(username, email, passwordHash);
         return userRepository.save(user);
-        // 将用户保存到 MySQL，并返回带有 id 的用户对象
     }
+    // 检查注册信息、加密密码并保存用户
+
+    public LoginResponse login(LoginRequest request) {
+        String email = normalizeEmail(request.getEmail());
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.UNAUTHORIZED,
+                        "邮箱或密码错误"
+                ));
+
+        boolean passwordMatches = passwordEncoder.matches(
+                request.getPassword(),
+                user.getPasswordHash()
+        );
+
+        if (!passwordMatches) {
+            throw new ResponseStatusException(
+                    HttpStatus.UNAUTHORIZED,
+                    "邮箱或密码错误"
+            );
+        }
+
+        String token = jwtService.generateToken(user);
+        return new LoginResponse(token, user);
+    }
+    // 查询邮箱、比对 BCrypt 密码，成功后生成 JWT
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+    // 去掉邮箱两端空格并统一转换为小写
 }
