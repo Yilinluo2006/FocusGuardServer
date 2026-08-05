@@ -10,8 +10,25 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+
+import jakarta.persistence.UniqueConstraint;
+
 @Entity
-@Table(name = "app_limits")
+@Table(
+        name = "app_limits",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_app_limits_user_package",
+                        columnNames = {
+                                "user_id",
+                                "package_name"
+                        }
+                )
+        }
+)
 public class AppLimit {
 
     @Id
@@ -20,7 +37,7 @@ public class AppLimit {
     // 数据库主键，由 MySQL 自动递增生成
 
     @NotBlank(message = "应用包名不能为空")
-    @Column(name = "package_name", nullable = false, unique = true)
+    @Column(name = "package_name", nullable = false)
     private String packageName;
     // 包名不能是 null、空字符串或只有空格
 
@@ -33,6 +50,17 @@ public class AppLimit {
     @Column(nullable = false)
     private boolean enabled;
     // 保存限制是否启用
+
+    @ManyToOne(
+            fetch = FetchType.LAZY,
+            optional = false
+    )
+    @JoinColumn(
+            name = "user_id",
+            nullable = false
+    )
+    private User user;
+// 每条应用限制必须属于一个用户
 
     public AppLimit() {
     }
@@ -76,4 +104,14 @@ public class AppLimit {
         this.enabled = enabled;
     }
     // 读取或修改启用状态
+
+    public User getUser() {
+        return user;
+    }
+// 返回这条限制所属的用户
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+// 设置这条限制所属的用户
 }

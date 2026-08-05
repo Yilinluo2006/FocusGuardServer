@@ -1,14 +1,25 @@
 package com.luoyilin.focusguardserver.config;
 
+import com.luoyilin.focusguardserver.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+    // Spring 自动注入我们编写的 JWT 验证过滤器
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -17,20 +28,20 @@ public class SecurityConfig {
 
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                // 关闭 CSRF，因为我们的客户端通过 JWT 访问 REST API
+                // REST API 使用 JWT，因此关闭 CSRF
 
                 .formLogin(AbstractHttpConfigurer::disable)
-                // 关闭 Spring Security 自带的网页登录页面
+                // 关闭 Spring Security 默认登录页面
 
                 .httpBasic(AbstractHttpConfigurer::disable)
-                // 关闭浏览器弹出的 HTTP Basic 用户名密码验证
+                // 关闭 HTTP Basic 用户名密码认证
 
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(
                                 SessionCreationPolicy.STATELESS
                         )
                 )
-                // 不在服务器中保存登录 Session，每次请求都依靠 JWT
+                // 不保存服务器 Session，每个请求都验证 JWT
 
                 .authorizeHttpRequests(authorize -> authorize
                                 .requestMatchers(
@@ -38,13 +49,19 @@ public class SecurityConfig {
                                         "/api/health",
                                         "/error"
                                 ).permitAll()
-                                // 注册、登录和健康检查不需要携带 JWT
+                                // 注册、登录、健康检查不需要 JWT
 
                                 .anyRequest().authenticated()
-                        // 其他所有接口都必须经过身份验证
+                        // 其他接口必须具有经过验证的身份
+                )
+
+                .addFilterBefore(
+                        jwtAuthenticationFilter,
+                        UsernamePasswordAuthenticationFilter.class
                 );
+        // 在默认用户名密码过滤器之前执行 JWT 过滤器
 
         return http.build();
-        // 构建并交给 Spring 管理这条安全过滤器链
+        // 创建最终的 Spring Security 过滤器链
     }
 }
