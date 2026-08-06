@@ -3,10 +3,12 @@ package com.luoyilin.focusguardserver.config;
 import com.luoyilin.focusguardserver.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
@@ -35,6 +37,15 @@ public class SecurityConfig {
 
                 .httpBasic(AbstractHttpConfigurer::disable)
                 // 关闭 HTTP Basic 用户名密码认证
+
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(
+                                new HttpStatusEntryPoint(
+                                        HttpStatus.UNAUTHORIZED
+                                )
+                        )
+                )
+                // JWT 缺失、过期或无效时，统一返回 HTTP 401
 
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(
