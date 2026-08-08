@@ -129,4 +129,9 @@ public class User {
         this.emailVerified = true;
     }
     // 邮箱验证码验证成功后，把状态改为已验证
+
+    public void updatePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+    // 密码重置成功后，用新的 BCrypt 哈希替换旧密码哈希
 }

@@ -71,6 +71,12 @@
         <!-- 引入完整的 Spring Security，同时仍然包含 BCrypt 密码加密功能 -->
         <!-- 提供安全的 BCrypt 密码哈希功能 -->
 
+        <!-- 提供 JavaMailSender 和 SMTP 邮件发送能力 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- JJWT 对外提供的编程接口 -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
