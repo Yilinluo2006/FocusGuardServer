@@ -2,6 +2,9 @@ package com.luoyilin.focusguardserver.controller;
 
 import com.luoyilin.focusguardserver.dto.auth.LoginRequest;
 import com.luoyilin.focusguardserver.dto.auth.LoginResponse;
+import com.luoyilin.focusguardserver.dto.auth.EmailVerificationCodeRequest;
+import com.luoyilin.focusguardserver.dto.auth.EmailVerificationConfirmRequest;
+import com.luoyilin.focusguardserver.dto.auth.EmailVerificationResponse;
 import com.luoyilin.focusguardserver.dto.auth.PasswordResetCodeRequest;
 import com.luoyilin.focusguardserver.dto.auth.PasswordResetCodeResponse;
 import com.luoyilin.focusguardserver.dto.auth.PasswordResetConfirmRequest;
@@ -10,6 +13,7 @@ import com.luoyilin.focusguardserver.dto.auth.RegisterRequest;
 import com.luoyilin.focusguardserver.dto.auth.RegisterResponse;
 import com.luoyilin.focusguardserver.model.User;
 import com.luoyilin.focusguardserver.service.AuthService;
+import com.luoyilin.focusguardserver.service.EmailVerificationService;
 import com.luoyilin.focusguardserver.service.PasswordResetService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -25,21 +29,29 @@ public class AuthController {
 
     private final AuthService authService;
     private final PasswordResetService passwordResetService;
+    private final EmailVerificationService emailVerificationService;
 
     public AuthController(
             AuthService authService,
-            PasswordResetService passwordResetService
+            PasswordResetService passwordResetService,
+            EmailVerificationService emailVerificationService
     ) {
         this.authService = authService;
         this.passwordResetService = passwordResetService;
+        this.emailVerificationService = emailVerificationService;
     }
-    // Spring 自动把登录注册服务和密码重置服务注入 Controller
+    // Spring 自动注入登录注册、密码重置和邮箱验证服务
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(
             @Valid @RequestBody RegisterRequest request
     ) {
         User user = authService.register(request);
+        emailVerificationService.requestVerificationCode(
+                user.getEmail()
+        );
+        // 注册成功后立即向用户邮箱发送六位验证码
+
         RegisterResponse response = new RegisterResponse(user);
 
         return ResponseEntity
@@ -47,6 +59,45 @@ public class AuthController {
                 .body(response);
     }
     // 接收 POST /api/auth/register，成功时返回 HTTP 201
+
+    @PostMapping("/email-verification/request")
+    public ResponseEntity<EmailVerificationResponse>
+    requestEmailVerificationCode(
+            @Valid @RequestBody EmailVerificationCodeRequest request
+    ) {
+        emailVerificationService.requestVerificationCode(
+                request.getEmail()
+        );
+        // 邮箱存在且尚未验证时生成并发送验证码
+
+        EmailVerificationResponse response =
+                new EmailVerificationResponse(
+                        "如果账号存在且尚未验证，验证码将发送到该邮箱"
+                );
+
+        return ResponseEntity.ok(response);
+    }
+    // 接收重新发送请求，并使用统一提示保护账号隐私
+
+    @PostMapping("/email-verification/confirm")
+    public ResponseEntity<EmailVerificationResponse>
+    confirmEmailVerification(
+            @Valid @RequestBody EmailVerificationConfirmRequest request
+    ) {
+        emailVerificationService.verifyEmail(
+                request.getEmail(),
+                request.getCode()
+        );
+        // 校验六位验证码，并把用户邮箱状态更新为已验证
+
+        EmailVerificationResponse response =
+                new EmailVerificationResponse(
+                        "邮箱验证成功，现在可以登录"
+                );
+
+        return ResponseEntity.ok(response);
+    }
+    // 接收邮箱与验证码，成功时返回 HTTP 200
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(

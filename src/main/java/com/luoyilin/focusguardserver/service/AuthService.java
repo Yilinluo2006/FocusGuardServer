@@ -77,6 +77,14 @@ public class AuthService {
             );
         }
 
+        if (!user.isEmailVerified()) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "请先完成注册邮箱验证"
+            );
+        }
+        // 密码正确但邮箱尚未验证时，不生成 JWT
+
         String token = jwtService.generateToken(user);
         return new LoginResponse(token, user);
     }
