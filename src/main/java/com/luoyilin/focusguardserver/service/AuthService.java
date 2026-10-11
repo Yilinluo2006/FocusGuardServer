@@ -31,15 +31,7 @@ public class AuthService {
     // Spring 自动注入数据库操作、密码处理和 JWT 服务
 
     public User register(RegisterRequest request) {
-        String username = request.getUsername().trim();
         String email = normalizeEmail(request.getEmail());
-
-        if (userRepository.existsByUsername(username)) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "用户名已经存在"
-            );
-        }
 
         if (userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(
@@ -51,7 +43,7 @@ public class AuthService {
         String passwordHash =
                 passwordEncoder.encode(request.getPassword());
 
-        User user = new User(username, email, passwordHash);
+        User user = User.createDefault(email, passwordHash);
         return userRepository.save(user);
     }
     // 检查注册信息、加密密码并保存用户
@@ -65,7 +57,7 @@ public class AuthService {
                         "邮箱或密码错误"
                 ));
 
-        boolean passwordMatches = passwordEncoder.matches(
+        boolean passwordMatches = user.getPasswordHash() != null && passwordEncoder.matches(
                 request.getPassword(),
                 user.getPasswordHash()
         );

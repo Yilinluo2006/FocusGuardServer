@@ -20,6 +20,15 @@ public class EmailService {
         this.senderAddress = senderAddress;
     }
     // Spring 自动注入邮件发送器和配置中的发件邮箱地址
+    @Async("mailTaskExecutor")
+    public void sendEmailBindingCode(String recipientAddress, String plainCode) {
+        if (senderAddress == null || senderAddress.isBlank()) throw new IllegalStateException("邮件发送账号尚未配置");
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(senderAddress); message.setTo(recipientAddress); message.setSubject("FocusGuard 邮箱换绑验证码");
+        message.setText("你正在将 FocusGuard 账号绑定到这个邮箱。\n\n验证码：" + plainCode
+                + "\n\n10 分钟内有效，请勿转发。换绑后使用新邮箱登录，账号和记录保持不变。\n如果不是你本人操作，请忽略。 ");
+        mailSender.send(message);
+    }
 
     @Async("mailTaskExecutor")
     public void sendPasswordResetCode(

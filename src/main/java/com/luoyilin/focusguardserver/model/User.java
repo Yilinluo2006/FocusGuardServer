@@ -22,6 +22,10 @@ import java.time.LocalDateTime;
                 @UniqueConstraint(
                         name = "uk_users_email",
                         columnNames = "email"
+                ),
+                @UniqueConstraint(
+                        name = "uk_users_phone",
+                        columnNames = "phone"
                 )
         }
 )
@@ -38,11 +42,15 @@ public class User {
             length = 50
     )
     private String username;
+    // Immutable legacy handle stays unique; display names may repeat.
+    @Column(name = "display_name", length = 96)
+    private String displayName;
+    @Column(name = "avatar_key", length = 32)
+    private String avatarKey;
     // 用户在 FocusGuard 中显示的名称
 
     @Column(
             name = "email",
-            nullable = false,
             length = 100
     )
     private String email;
@@ -50,7 +58,6 @@ public class User {
 
     @Column(
             name = "password_hash",
-            nullable = false,
             length = 255
     )
     private String passwordHash;
@@ -61,6 +68,9 @@ public class User {
             nullable = false
     )
     private boolean emailVerified = false;
+    @Column(length = 16) private String phone;
+    @Column(nullable = false) private boolean phoneVerified = false;
+    @Column(nullable = false, columnDefinition = "bit(1) not null default b'0'") private boolean wechatVerified = false;
     // 表示邮箱是否已经通过验证码验证，默认未验证
 
     @Column(
@@ -103,6 +113,24 @@ public class User {
     public String getUsername() {
         return username;
     }
+    public static User createDefault(String email, String passwordHash) {
+        User user = new User("fg_" + java.util.UUID.randomUUID().toString().replace("-", ""), email, passwordHash);
+        user.displayName = "小奶娃"; user.avatarKey = "default";
+        return user;
+    }
+    public String getDisplayName() { return displayName == null || displayName.isBlank() ? username : displayName; }
+    public String getAvatarKey() { return avatarKey == null ? "default" : avatarKey; }
+    public void updateProfile(String name, String avatar) { displayName = name; avatarKey = avatar; }
+    public void bindEmail(String email) { this.email = email; this.emailVerified = true; }
+    public static User createPhone(String phone) {
+        User user = createDefault(null, null); user.bindPhone(phone); return user;
+    }
+    public void bindPhone(String phone) { this.phone = phone; phoneVerified = true; }
+    public String getPhone() { return phone; }
+    public boolean isPhoneVerified() { return phoneVerified; }
+    public boolean hasVerifiedLogin() { return (email != null && emailVerified) || (phone != null && phoneVerified) || wechatVerified; }
+    public void verifyWechat() { wechatVerified = true; }
+    public boolean isWechatVerified() { return wechatVerified; }
     // 返回用户名
 
     public String getEmail() {

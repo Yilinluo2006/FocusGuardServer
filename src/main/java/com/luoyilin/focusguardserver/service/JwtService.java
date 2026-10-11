@@ -37,9 +37,9 @@ public class JwtService {
         Instant expirationTime = now.plusMillis(expirationMs);
 
         return Jwts.builder()
-                .subject(user.getEmail())
+                .subject("user:" + user.getId())
                 .claim("userId", user.getId())
-                .claim("username", user.getUsername())
+                .claim("username", user.getDisplayName())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expirationTime))
                 .signWith(signingKey)
@@ -47,10 +47,15 @@ public class JwtService {
     }
     // 创建包含用户身份、签发时间和过期时间的 JWT
 
-    public String extractEmail(String token) {
-        return parseClaims(token).getSubject();
+    public Long extractUserId(String token) {
+        try {
+            Object value = parseClaims(token).get("userId");
+            return value instanceof Number && ((Number) value).longValue() > 0 ? ((Number) value).longValue() : null;
+        } catch (JwtException | IllegalArgumentException exception) {
+            return null;
+        }
     }
-    // 验证令牌后，读取 subject 中保存的用户邮箱
+    // 使用稳定的用户 ID 认证；旧版邮箱 subject 的令牌同样携带此字段。
 
     public boolean isTokenValid(String token) {
         try {

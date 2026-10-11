@@ -15,6 +15,10 @@ public class LoginResponse {
 
     private final String username;
     // 当前登录用户的显示名称
+    private final String avatarKey;
+    private final String phone;
+    private final boolean phoneVerified, hasPassword;
+    private final boolean wechatVerified;
 
     private final String email;
     // 当前登录用户的邮箱
@@ -26,7 +30,10 @@ public class LoginResponse {
         this.token = token;
         this.tokenType = "Bearer";
         this.userId = user.getId();
-        this.username = user.getUsername();
+        this.username = user.getDisplayName();
+        this.avatarKey = user.getAvatarKey();
+        this.phone = user.getPhone(); this.phoneVerified = user.isPhoneVerified(); this.hasPassword = user.getPasswordHash() != null;
+        this.wechatVerified = user.isWechatVerified();
         this.email = user.getEmail();
         this.emailVerified = user.isEmailVerified();
     }
@@ -60,5 +67,11 @@ public class LoginResponse {
     public boolean isEmailVerified() {
         return emailVerified;
     }
+    public String getDisplayName() { return username; }
+    public String getAvatarKey() { return avatarKey; }
+    public String getPhone() { return phone; }
+    public boolean isPhoneVerified() { return phoneVerified; }
+    public boolean isHasPassword() { return hasPassword; }
+    public boolean isWechatVerified() { return wechatVerified; }
     // 返回邮箱验证状态
 }

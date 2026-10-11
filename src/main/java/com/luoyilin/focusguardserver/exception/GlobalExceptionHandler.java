@@ -11,6 +11,10 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleIdentityConflict(org.springframework.dao.DataIntegrityViolationException exception) {
+        return ResponseEntity.status(409).body(Map.of("status", 409, "message", "账号信息发生冲突，请刷新后重试"));
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidationException(

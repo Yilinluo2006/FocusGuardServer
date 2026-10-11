@@ -6,14 +6,12 @@ import jakarta.validation.constraints.Size;
 
 public class RegisterRequest {
 
-    @NotBlank(message = "用户名不能为空")
     @Size(
-            min = 3,
             max = 50,
-            message = "用户名长度必须在 3 到 50 个字符之间"
+            message = "旧版用户名字段不能超过 50 个字符"
     )
     private String username;
-    // 接收用户在应用中显示的用户名
+    // 兼容旧客户端字段；新注册默认显示“小奶娃”，不要求提交昵称。
 
     @NotBlank(message = "邮箱不能为空")
     @Email(message = "邮箱格式不正确")

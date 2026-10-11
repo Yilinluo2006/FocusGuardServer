@@ -23,7 +23,7 @@ public class RegisterResponse {
 
     public RegisterResponse(User user) {
         this.id = user.getId();
-        this.username = user.getUsername();
+        this.username = user.getDisplayName();
         this.email = user.getEmail();
         this.emailVerified = user.isEmailVerified();
         this.createdAt = user.getCreatedAt();

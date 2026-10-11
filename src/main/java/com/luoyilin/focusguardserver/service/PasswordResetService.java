@@ -53,7 +53,7 @@ public class PasswordResetService {
         // 去掉邮箱两端空格并转换为小写
 
         Optional<User> optionalUser =
-                userRepository.findByEmail(normalizedEmail);
+                userRepository.lockByEmail(normalizedEmail);
         // 根据邮箱查询需要找回密码的用户
 
         if (optionalUser.isEmpty()) {
@@ -117,7 +117,8 @@ public class PasswordResetService {
         String normalizedEmail = normalizeEmail(email);
         // 使用与注册、登录相同的邮箱标准化规则
 
-        User user = userRepository.findByEmail(normalizedEmail)
+        // Share the account lock with email binding: an old-email code cannot race a binding change.
+        User user = userRepository.lockByEmail(normalizedEmail)
                 .orElseThrow(this::invalidResetCodeException);
         // 邮箱不存在时返回统一错误，不向外暴露账号是否存在
 

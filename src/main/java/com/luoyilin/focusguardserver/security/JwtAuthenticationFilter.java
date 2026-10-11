@@ -55,18 +55,14 @@ public class JwtAuthenticationFilter
         String token = authorizationHeader.substring(7);
         // 删除开头的 "Bearer "，只保留真正的 JWT
 
-        if (jwtService.isTokenValid(token)
-                && SecurityContextHolder.getContext()
+        if (SecurityContextHolder.getContext()
                 .getAuthentication() == null) {
 
-            String email = jwtService.extractEmail(token);
-            // 从有效 JWT 中读取登录用户的邮箱
+            // Existing JWTs already contain userId; changing a verified login identity never changes ownership.
+            Long userId = jwtService.extractUserId(token);
+            User user = userId == null ? null : userRepository.findById(userId).orElse(null);
 
-            User user = userRepository.findByEmail(email)
-                    .orElse(null);
-            // 根据邮箱查询数据库中的真实用户
-
-            if (user != null) {
+            if (user != null && user.hasVerifiedLogin()) {
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 user,

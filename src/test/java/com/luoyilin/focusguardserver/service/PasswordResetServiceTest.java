@@ -51,7 +51,7 @@ class PasswordResetServiceTest {
                 "hashed-password"
         );
 
-        when(userRepository.findByEmail("test@example.com"))
+        when(userRepository.lockByEmail("test@example.com"))
                 .thenReturn(Optional.of(user));
         // 模拟数据库中存在该邮箱对应的账号
 
@@ -85,7 +85,7 @@ class PasswordResetServiceTest {
                 "hashed-password"
         );
 
-        when(userRepository.findByEmail("test@example.com"))
+        when(userRepository.lockByEmail("test@example.com"))
                 .thenReturn(Optional.of(user));
 
         when(
